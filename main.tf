@@ -45,6 +45,7 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "this" {
   certificate = vault_pki_secret_backend_root_sign_intermediate.this.certificate
 }
 
+# and set URLs
 resource "vault_pki_secret_backend_config_urls" "this" {
   for_each = var.urls_prefix
   depends_on = [vault_pki_secret_backend_intermediate_set_signed.this]
