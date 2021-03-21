@@ -9,12 +9,19 @@ terraform {
   }
 }
 
+locals {
+  path = coalesce(var.path, var.name)
+  description = coalesce(var.description, "${var.name} Certificate Authority")
+  parent_authority_path = var.parent_ca
+  urls_prefix = var.urls_prefix
+}
+
 # Enable mount point
 resource "vault_mount" "this" {
   type = "pki"
   
-  path = coalesce(var.path, var.name)
-  description = coalesce(var.description, "${var.name} Certificate Authority")
+  path = local.path
+  description = local.description
 }
 
 # Create a CSR that will be signed from parent CA
@@ -31,7 +38,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "this" {
 resource "vault_pki_secret_backend_root_sign_intermediate" "this" {
   depends_on = [vault_pki_secret_backend_intermediate_cert_request.this]
 
-  backend = var.parent_ca
+  backend = local.parent_authority_path
 
   csr = vault_pki_secret_backend_intermediate_cert_request.this.csr
   common_name = vault_pki_secret_backend_intermediate_cert_request.this.common_name
@@ -47,8 +54,9 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "this" {
 
 # and set URLs
 resource "vault_pki_secret_backend_config_urls" "this" {
-  for_each = var.urls_prefix
   depends_on = [vault_pki_secret_backend_intermediate_set_signed.this]
+  
+  for_each = local.urls_prefix
   
   backend = vault_pki_secret_backend_intermediate_set_signed.this.backend
   
